@@ -6,6 +6,7 @@ for extracurricular activities at Mergington High School.
 """
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
@@ -13,6 +14,22 @@ from pathlib import Path
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
+
+# In-memory user database
+users = {}
+
+# Pydantic models
+
+
+class UserSignup(BaseModel):
+    email: str
+    password: str
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
 
 # Mount the static files directory
 current_dir = Path(__file__).parent
@@ -76,6 +93,23 @@ activities = {
         "participants": ["charlotte@mergington.edu", "henry@mergington.edu"]
     }
 }
+
+
+@app.post("/signup")
+def signup(user: UserSignup):
+    if user.email in users:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    users[user.email] = user.password
+    return {"message": f"User {user.email} registered successfully"}
+
+
+@app.post("/login")
+def login(user: UserLogin):
+    if user.email not in users:
+        raise HTTPException(status_code=404, detail="User not found")
+    if users[user.email] != user.password:
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    return {"message": f"User {user.email} logged in successfully"}
 
 
 @app.get("/")
